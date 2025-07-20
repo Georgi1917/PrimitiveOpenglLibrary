@@ -3,6 +3,10 @@
 #include "include/glfw3.h"
 
 #include <iostream>
+#include <math.h>
+
+#define SPEED 250.0f
+#define PI 3.1415926
 
 struct Vector2
 {
@@ -25,8 +29,6 @@ struct Triangle
     Vector2 C;
 };
 
-#define SPEED 250.0f
-
 float NormalizeCoordinate(int coord, int max, char axis)
 {
 
@@ -42,6 +44,37 @@ float NormalizeCoordinate(int coord, int max, char axis)
         return 1.0f - 2.0f * ((float)coord/(float)max);
 
     }
+
+}
+
+void DrawCircle(float cx, float cy, float radius, int segments)
+{
+
+    float theta = PI * 2 / (float)segments;
+    float tanFactor = tanf(theta);
+    float radialFactor = cosf(theta);
+
+    float x = radius;
+    float y = 0;
+
+    glLineWidth(5.0f);
+    glBegin(GL_LINE_LOOP);
+    for(int i = 0; i < segments; i++)
+    {
+
+        glVertex2f(x + cx, y + cy);
+
+        float tx = -y;
+        float ty = x;
+
+        x += tx * tanFactor;
+        y += ty * tanFactor;
+
+        x *= radialFactor;
+        y *= radialFactor;
+
+    }
+    glEnd();
 
 }
 
@@ -170,9 +203,12 @@ int main(void)
         rect.x += velocity.x * deltaTime * SPEED;
         rect.y += velocity.y * deltaTime * SPEED;
 
-        DrawRect(rect);
-        DrawRect(rect2);
-        DrawTriangle(tr);
+        // DrawRect(rect);
+        // DrawRect(rect2);
+        // DrawTriangle(tr);
+
+        glColor3f(0.0, 0.5, 0.5);
+        DrawCircle(250, 250, 100, 360);
         
         velocity = { 0 };
 
