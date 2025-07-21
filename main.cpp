@@ -47,34 +47,41 @@ float NormalizeCoordinate(int coord, int max, char axis)
 
 }
 
-void DrawCircle(float cx, float cy, float radius, int segments)
+void DrawCircle(float cx, float cy, float radius)
 {
 
-    float theta = PI * 2 / (float)segments;
-    float tanFactor = tanf(theta);
-    float radialFactor = cosf(theta);
+    const int segments = 360;
+    const int numOfVertices = segments + 2;
 
-    float x = radius;
-    float y = 0;
+    float doublePI = PI * 2.0f;
 
-    glLineWidth(5.0f);
-    glBegin(GL_LINE_LOOP);
-    for(int i = 0; i < segments; i++)
+    float verticesX[numOfVertices];
+    float verticesY[numOfVertices];
+
+    verticesX[0] = NormalizeCoordinate(cx, 1280, 'x');
+    verticesY[0] = NormalizeCoordinate(cy, 720, 'y');
+
+    for (int i = 1; i < numOfVertices; i++)
     {
 
-        glVertex2f(x + cx, y + cy);
-
-        float tx = -y;
-        float ty = x;
-
-        x += tx * tanFactor;
-        y += ty * tanFactor;
-
-        x *= radialFactor;
-        y *= radialFactor;
+        verticesX[i] = NormalizeCoordinate(cx + (radius * cos(i * doublePI / segments)), 1280, 'x');
+        verticesY[i] = NormalizeCoordinate(cy + (radius * sin(i * doublePI / segments)), 720, 'y');
 
     }
-    glEnd();
+
+    float allVertices[numOfVertices * 2];
+
+    for (int i = 0; i < numOfVertices; i++)
+    {
+
+        allVertices[i * 2] = verticesX[i];
+        allVertices[(i * 2) + 1] = verticesY[i];
+
+    }
+
+    glBufferData(GL_ARRAY_BUFFER, sizeof(allVertices), allVertices, GL_STATIC_DRAW);
+
+    glDrawArrays(GL_TRIANGLE_FAN, 0, numOfVertices);
 
 }
 
@@ -203,12 +210,11 @@ int main(void)
         rect.x += velocity.x * deltaTime * SPEED;
         rect.y += velocity.y * deltaTime * SPEED;
 
-        // DrawRect(rect);
-        // DrawRect(rect2);
-        // DrawTriangle(tr);
+        DrawRect(rect);
+        DrawRect(rect2);
+        DrawTriangle(tr);
 
-        glColor3f(0.0, 0.5, 0.5);
-        DrawCircle(250, 250, 100, 360);
+        DrawCircle(640, 360, 100);
         
         velocity = { 0 };
 
