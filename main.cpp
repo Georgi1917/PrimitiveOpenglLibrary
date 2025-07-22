@@ -3,10 +3,19 @@
 #include "include/glfw3.h"
 
 #include <iostream>
+#include <fstream>
+#include <string>
+#include <sstream>
 #include <math.h>
 
 #define SPEED 250.0f
 #define PI 3.1415926
+
+struct ShaderProgram
+{
+    std::string vertexSource;
+    std::string fragmentSource;
+};
 
 struct Vector2
 {
@@ -29,6 +38,59 @@ struct Triangle
     Vector2 C;
 };
 
+struct Circle
+{
+    float cx;
+    float cy;
+    float radius;
+};
+
+std::string GetShader(std::string &filepath)
+{
+
+    std::ifstream stream(filepath);
+    std::string line;
+
+    std::stringstream ss;
+
+    while (std::getline(stream, line))
+        ss << line << "\n";
+
+    return ss.str();
+
+}
+
+unsigned int CompileShader(unsigned int type, std::string &source)
+{
+
+    unsigned int id = glCreateShader(type);
+    const char *src = source.c_str();
+    glShaderSource(id, 1, &src, nullptr);
+    glCompileShader(id);
+
+    return id;
+
+}
+
+unsigned int CreateShaders(std::string& vertexSource, std::string &fragmentSource)
+{
+
+    unsigned int program = glCreateProgram();
+    unsigned int vertexShader = CompileShader(GL_VERTEX_SHADER, vertexSource);
+    unsigned int fragmentShader = CompileShader(GL_FRAGMENT_SHADER, fragmentSource);
+
+    glAttachShader(program, vertexShader);
+    glAttachShader(program, fragmentShader);
+    glLinkProgram(program);
+    glValidateProgram(program);
+
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    return program;
+
+}
+
 float NormalizeCoordinate(int coord, int max, char axis)
 {
 
@@ -47,7 +109,7 @@ float NormalizeCoordinate(int coord, int max, char axis)
 
 }
 
-void DrawCircle(float cx, float cy, float radius)
+void DrawCircle(Circle circle)
 {
 
     const int segments = 360;
@@ -58,14 +120,14 @@ void DrawCircle(float cx, float cy, float radius)
     float verticesX[numOfVertices];
     float verticesY[numOfVertices];
 
-    verticesX[0] = NormalizeCoordinate(cx, 1280, 'x');
-    verticesY[0] = NormalizeCoordinate(cy, 720, 'y');
+    verticesX[0] = NormalizeCoordinate(circle.cx, 1280, 'x');
+    verticesY[0] = NormalizeCoordinate(circle.cy, 720, 'y');
 
     for (int i = 1; i < numOfVertices; i++)
     {
 
-        verticesX[i] = NormalizeCoordinate(cx + (radius * cos(i * doublePI / segments)), 1280, 'x');
-        verticesY[i] = NormalizeCoordinate(cy + (radius * sin(i * doublePI / segments)), 720, 'y');
+        verticesX[i] = NormalizeCoordinate(circle.cx + (circle.radius * cos(i * doublePI / segments)), 1280, 'x');
+        verticesY[i] = NormalizeCoordinate(circle.cy + (circle.radius * sin(i * doublePI / segments)), 720, 'y');
 
     }
 
@@ -81,7 +143,7 @@ void DrawCircle(float cx, float cy, float radius)
 
     glBufferData(GL_ARRAY_BUFFER, sizeof(allVertices), allVertices, GL_STATIC_DRAW);
 
-    glDrawArrays(GL_TRIANGLE_FAN, 0, numOfVertices);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, numOfVertices);    
 
 }
 
@@ -147,7 +209,6 @@ int main(void)
     glfwSwapInterval(1);
 
     glfwMakeContextCurrent(window);
-    //glfwSetKeyCallback(window, keyCallback);
 
     if (glewInit() != GLEW_OK)
     {
@@ -156,23 +217,6 @@ int main(void)
         return -1;
 
     }
-  
-    RECT rect = { 0 };
-    rect.x = 30;
-    rect.y = 30;
-    rect.width = 40;
-    rect.height = 40;
-    RECT rect2 = { 0 };
-    rect2.x = 350;
-    rect2.y = 350;
-    rect2.width = 50;
-    rect2.height = 50;
-    Triangle tr = { 0 };
-    tr.A = {0, 0};
-    tr.B = {400, 0};
-    tr.C = {200, 200};
-
-    Vector2 velocity = { 0 };
 
     unsigned int buffer;
     glGenBuffers(1, &buffer);
@@ -189,34 +233,43 @@ int main(void)
     double lastTime = currTime;
     double deltaTime;
 
+    Triangle tr = { 0 };
+    tr.A = { 200, 450 };
+    tr.B = { 400, 450} ;
+    tr.C = { 300, 240 };
+    RECT r = { 0 };
+    r.x = 540;
+    r.y = 240;
+    r.width = 200;
+    r.height = 200;
+    Circle c = { 0 };
+    c.cx = 940;
+    c.cy = 340;
+    c.radius = 100;
+
+    std::string fs = "shaders/fragment.shader";
+    std::string vs = "shaders/vertex.shader";
+
+    std::string fsSource = GetShader(fs);
+    std::string vsSource = GetShader(vs);
+
+    unsigned int shaderProgram = CreateShaders(vsSource, fsSource);
+    glUseProgram(shaderProgram);
+
     while (!glfwWindowShouldClose(window))
     {
 
         currTime = glfwGetTime();
         deltaTime = currTime - lastTime;
         lastTime = currTime;
-
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-            velocity.x = -1;
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-            velocity.x = 1;
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            velocity.y = -1;
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            velocity.y = 1;
        
         glClear(GL_COLOR_BUFFER_BIT);
-        
-        rect.x += velocity.x * deltaTime * SPEED;
-        rect.y += velocity.y * deltaTime * SPEED;
 
-        DrawRect(rect);
-        DrawRect(rect2);
+
+
         DrawTriangle(tr);
-
-        DrawCircle(640, 360, 100);
-        
-        velocity = { 0 };
+        DrawRect(r);
+        DrawCircle(c);
 
         glfwSwapBuffers(window);
 
