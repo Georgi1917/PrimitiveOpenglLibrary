@@ -3,7 +3,7 @@ CXXFLAGS = -Iinclude
 
 LDFLAGS = -Llib -lglfw3 -lglew32 -lgdi32 -lopengl32
 
-SRC = main.cpp
+SRC = main.cpp framework.cpp
 TARGET = main.exe
 
 all: $(TARGET)

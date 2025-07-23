@@ -1,225 +1,25 @@
-#define GLEW_STATIC
-#include "include/glew.h"
-#include "include/glfw3.h"
-
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <sstream>
-#include <math.h>
+#include "framework.h"
 
 #define SPEED 250.0f
-#define PI 3.1415926
 
-struct Vector4
-{
-    float r;
-    float g;
-    float b;
-    float a;
-};
-
-#define RED Vector4{255, 0, 0}
-#define GREEN Vector4{0, 255, 0}
-#define BLUE Vector4{0, 0, 255}
-
-struct Vector2
-{
-    float x;
-    float y;
-};
-
-struct RECT
-{
-    float x;
-    float y;
-    unsigned int width;
-    unsigned int height;
-};
-
-struct Triangle
-{
-    Vector2 A;
-    Vector2 B;
-    Vector2 C;
-};
-
-struct Circle
-{
-    float cx;
-    float cy;
-    float radius;
-};
-
-std::string GetShader(std::string &filepath)
+void updatePos(double delta, RECT &rect, GLFWwindow* window)
 {
 
-    std::ifstream stream(filepath);
-    std::string line;
+    Vector2 velocity = { 0 };
 
-    std::stringstream ss;
+    if (GLFW_PRESS == glfwGetKey(window, GLFW_KEY_A))
+        velocity.x = -1;
+    if (GLFW_PRESS == glfwGetKey(window, GLFW_KEY_D))
+        velocity.x = 1;
+    if (GLFW_PRESS == glfwGetKey(window, GLFW_KEY_W))
+        velocity.y = -1;
+    if (GLFW_PRESS == glfwGetKey(window, GLFW_KEY_S))
+        velocity.y = 1;
 
-    while (std::getline(stream, line))
-        ss << line << "\n";
-
-    return ss.str();
+    rect.x += velocity.x * delta * SPEED;
+    rect.y += velocity.y * delta * SPEED;
 
 }
-
-unsigned int CompileShader(unsigned int type, std::string &source)
-{
-
-    unsigned int id = glCreateShader(type);
-    const char *src = source.c_str();
-    glShaderSource(id, 1, &src, nullptr);
-    glCompileShader(id);
-
-    return id;
-
-}
-
-unsigned int CreateShaders(std::string& vertexSource, std::string &fragmentSource)
-{
-
-    unsigned int program = glCreateProgram();
-    unsigned int vertexShader = CompileShader(GL_VERTEX_SHADER, vertexSource);
-    unsigned int fragmentShader = CompileShader(GL_FRAGMENT_SHADER, fragmentSource);
-
-    glAttachShader(program, vertexShader);
-    glAttachShader(program, fragmentShader);
-    glLinkProgram(program);
-    glValidateProgram(program);
-
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-
-    return program;
-
-}
-
-Vector4 NormalizeRGBValues(Vector4 values)
-{
-
-    return Vector4{values.r / 255, values.g / 255, values.b / 255, values.a / 255};
-
-}
-
-float NormalizeCoordinate(int coord, int max, char axis)
-{
-
-    if (axis == 'x') 
-    {
-        
-        return 2.0f * ((float)coord/(float)max) - 1.0f;
-
-    }
-    else 
-    {
-        
-        return 1.0f - 2.0f * ((float)coord/(float)max);
-
-    }
-
-}
-
-void AssignColors(Vector4 color)
-{
-
-    Vector4 normalizeValues = NormalizeRGBValues(color);
-
-    int prog;
-    glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
-    int uniformLocation = glGetUniformLocation(prog, "u_Color");
-    glUniform4f(uniformLocation, normalizeValues.r, normalizeValues.g, normalizeValues.b, normalizeValues.a);
-
-}
-
-void DrawCircle(Circle circle, Vector4 color)
-{
-
-    AssignColors(color);
-
-    const int segments = 360;
-    const int numOfVertices = segments + 2;
-
-    float doublePI = PI * 2.0f;
-
-    float verticesX[numOfVertices];
-    float verticesY[numOfVertices];
-
-    verticesX[0] = NormalizeCoordinate(circle.cx, 1280, 'x');
-    verticesY[0] = NormalizeCoordinate(circle.cy, 720, 'y');
-
-    for (int i = 1; i < numOfVertices; i++)
-    {
-
-        verticesX[i] = NormalizeCoordinate(circle.cx + (circle.radius * cos(i * doublePI / segments)), 1280, 'x');
-        verticesY[i] = NormalizeCoordinate(circle.cy + (circle.radius * sin(i * doublePI / segments)), 720, 'y');
-
-    }
-
-    float allVertices[numOfVertices * 2];
-
-    for (int i = 0; i < numOfVertices; i++)
-    {
-
-        allVertices[i * 2] = verticesX[i];
-        allVertices[(i * 2) + 1] = verticesY[i];
-
-    }
-
-    glBufferData(GL_ARRAY_BUFFER, sizeof(allVertices), allVertices, GL_STATIC_DRAW);
-
-    glDrawArrays(GL_TRIANGLE_FAN, 0, numOfVertices);    
-
-}
-
-void DrawTriangle(Triangle tr, Vector4 color)
-{
-
-    AssignColors(color);
-
-    float positions[] = {
-
-        NormalizeCoordinate(tr.A.x, 1280, 'x'), NormalizeCoordinate(tr.A.y, 720, 'y'),
-        NormalizeCoordinate(tr.B.x, 1280, 'x'), NormalizeCoordinate(tr.B.y, 720, 'y'),
-        NormalizeCoordinate(tr.C.x, 1280, 'x'), NormalizeCoordinate(tr.C.y, 720, 'y')
-
-    };
-
-    glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
-
-    glDrawArrays(GL_TRIANGLES, 0, sizeof(positions) / sizeof(float));
-
-}
-
-void DrawRect(RECT rect, Vector4 color)
-{
-
-    AssignColors(color);
-
-    float positions[] = {
-
-        NormalizeCoordinate(rect.x, 1280, 'x'), NormalizeCoordinate(rect.y + rect.height, 720, 'y'),
-        NormalizeCoordinate(rect.x, 1280, 'x'), NormalizeCoordinate(rect.y, 720, 'y'),
-        NormalizeCoordinate(rect.x + rect.width, 1280, 'x'), NormalizeCoordinate(rect.y + rect.height, 720, 'y'),
-        NormalizeCoordinate(rect.x + rect.width, 1280, 'x'), NormalizeCoordinate(rect.y, 720, 'y')
-
-    };
-
-    unsigned int indexBuffer[] = {
-        0, 1, 2,
-        2, 3, 1
-    };
-
-    glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
-
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indexBuffer), indexBuffer, GL_STATIC_DRAW);
-
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-}
-
 
 int main(void)
 {
@@ -277,6 +77,11 @@ int main(void)
     c.cx = 940;
     c.cy = 340;
     c.radius = 100;
+    RECT testRect = { 0 };
+    testRect.x = 60;
+    testRect.y = 60;
+    testRect.width = 50;
+    testRect.height = 50;
 
     std::string fs = "shaders/fragment.shader";
     std::string vs = "shaders/vertex.shader";
@@ -297,9 +102,12 @@ int main(void)
        
         glClear(GL_COLOR_BUFFER_BIT);
 
-        DrawTriangle(tr, RED);
-        DrawRect(r, GREEN);
-        DrawCircle(c, BLUE);
+        updatePos(deltaTime, testRect, window);
+
+        // DrawTriangle(tr, RED);
+        // DrawRect(r, GREEN);
+        // DrawCircle(c, BLUE);
+        DrawRect(testRect, RED);
 
         glfwSwapBuffers(window);
 
