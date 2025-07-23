@@ -11,11 +11,17 @@
 #define SPEED 250.0f
 #define PI 3.1415926
 
-struct ShaderProgram
+struct Vector4
 {
-    std::string vertexSource;
-    std::string fragmentSource;
+    float r;
+    float g;
+    float b;
+    float a;
 };
+
+#define RED Vector4{255, 0, 0}
+#define GREEN Vector4{0, 255, 0}
+#define BLUE Vector4{0, 0, 255}
 
 struct Vector2
 {
@@ -91,6 +97,13 @@ unsigned int CreateShaders(std::string& vertexSource, std::string &fragmentSourc
 
 }
 
+Vector4 NormalizeRGBValues(Vector4 values)
+{
+
+    return Vector4{values.r / 255, values.g / 255, values.b / 255, values.a / 255};
+
+}
+
 float NormalizeCoordinate(int coord, int max, char axis)
 {
 
@@ -109,8 +122,22 @@ float NormalizeCoordinate(int coord, int max, char axis)
 
 }
 
-void DrawCircle(Circle circle)
+void AssignColors(Vector4 color)
 {
+
+    Vector4 normalizeValues = NormalizeRGBValues(color);
+
+    int prog;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
+    int uniformLocation = glGetUniformLocation(prog, "u_Color");
+    glUniform4f(uniformLocation, normalizeValues.r, normalizeValues.g, normalizeValues.b, normalizeValues.a);
+
+}
+
+void DrawCircle(Circle circle, Vector4 color)
+{
+
+    AssignColors(color);
 
     const int segments = 360;
     const int numOfVertices = segments + 2;
@@ -147,8 +174,10 @@ void DrawCircle(Circle circle)
 
 }
 
-void DrawTriangle(Triangle tr)
+void DrawTriangle(Triangle tr, Vector4 color)
 {
+
+    AssignColors(color);
 
     float positions[] = {
 
@@ -164,8 +193,10 @@ void DrawTriangle(Triangle tr)
 
 }
 
-void DrawRect(RECT rect)
+void DrawRect(RECT rect, Vector4 color)
 {
+
+    AssignColors(color);
 
     float positions[] = {
 
@@ -254,6 +285,7 @@ int main(void)
     std::string vsSource = GetShader(vs);
 
     unsigned int shaderProgram = CreateShaders(vsSource, fsSource);
+
     glUseProgram(shaderProgram);
 
     while (!glfwWindowShouldClose(window))
@@ -265,11 +297,9 @@ int main(void)
        
         glClear(GL_COLOR_BUFFER_BIT);
 
-
-
-        DrawTriangle(tr);
-        DrawRect(r);
-        DrawCircle(c);
+        DrawTriangle(tr, RED);
+        DrawRect(r, GREEN);
+        DrawCircle(c, BLUE);
 
         glfwSwapBuffers(window);
 
